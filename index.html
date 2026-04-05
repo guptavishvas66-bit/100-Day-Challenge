@@ -131,4 +131,171 @@
     </header>
 
     <div class="top-stats">
-        <div class="stat-card"><div class="label">Energy Burned</div><div id="total-cal" class="
+        <div class="stat-card"><div class="label">Energy Burned</div><div id="total-cal" class="val">0</div><div class="label">Total Kcal</div></div>
+        <div class="stat-card"><div class="label">Time Invested</div><div id="total-dur" class="val">0</div><div class="label">Total Mins</div></div>
+        <div class="stat-card"><div class="label">Current Streak</div><div id="curr-streak" class="val" style="color:var(--neon-green)">0</div><div class="label">Days Solid</div></div>
+        <div class="stat-card"><div class="label">Remaining</div><div id="days-remaining" class="val">0</div><div class="label">Days to Go</div></div>
+    </div>
+
+    <div class="charts-grid">
+        <div class="chart-box"><div class="label" style="margin-bottom:15px;">Volume Distribution</div><canvas id="muscleRadar"></canvas></div>
+        <div class="chart-box"><div class="label" style="margin-bottom:15px;">Activity Split</div><canvas id="activityPie"></canvas></div>
+    </div>
+
+    <div class="chart-box" style="margin-bottom:25px;">
+        <div class="label" style="margin-bottom:15px;">Running Evolution (Distance vs Pace)</div>
+        <canvas id="runningChart" style="max-height: 280px;"></canvas>
+    </div>
+
+    <div class="matrix" id="dayMatrix"></div>
+</div>
+
+<script>
+const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTFHuEh8YaZrUW7H4YijeyEoWhLtigGxbmmDAblq-SoobT-RI1MO30Bu0t_zcOttpph-QrsJOxm_X3P/pub?gid=0&single=true&output=csv';
+
+const iconMap = {
+    'boxing': '🥊', 'gym': '🏋️', 'running': '🏃', 'cycling': '🚴', 'rest': '🔋',
+    'swimming': '🏊', 'yoga': '🧘', 'walking': '🚶', 'cardio': '❤️', 'missed': '❌'
+};
+
+Papa.parse(csvUrl, {
+    download: true, header: true,
+    complete: function(results) { processData(results.data); }
+});
+
+function processData(data) {
+    const matrix = document.getElementById('dayMatrix');
+    matrix.innerHTML = ''; 
+    let muscleCounts = {}, activityCounts = {};
+    let totalCal = 0, totalDur = 0, currentStreak = 0, maxStreak = 0, tempStreak = 0, completedCount = 0;
+    
+    let runDates = [], runMetric1 = [], runMetric2 = [], runMetric3 = [];
+
+    for (let i = 1; i <= 100; i++) {
+        const row = data.find(r => Object.values(r)[0] == i);
+        const card = document.createElement('div');
+        card.className = 'day-card';
+        
+        if (row) {
+            const vals = Object.values(row);
+            const date = vals[1], actRaw = vals[2] || '', details = vals[3] || '', status = (vals[4] || '').trim().toLowerCase();
+            const dur = parseFloat(vals[5]) || 0, cal = parseFloat(vals[6]) || 0, muscleRaw = vals[7] || '', comment = vals[8] || '';
+
+            if (status === 'missed') {
+                card.classList.add('missed');
+                tempStreak = 0; 
+                card.innerHTML = `<div class="day-num">${i}</div><div class="day-act-icon">❌</div>`;
+            } else if (status === 'completed') {
+                completedCount++;
+                tempStreak++;
+                currentStreak = tempStreak;
+                if (tempStreak > maxStreak) maxStreak = tempStreak;
+
+                totalCal += cal;
+                totalDur += dur;
+
+                const isRest = actRaw.toLowerCase().includes('rest');
+                card.classList.add(isRest ? 'rest' : 'completed');
+
+                const activities = actRaw.split(',').map(s => s.trim());
+                let cardIcons = activities.map(a => iconMap[a.toLowerCase()] || '⚡').join('');
+                card.innerHTML = `<div class="day-num">${i}</div><div class="day-act-icon">${cardIcons}</div>`;
+
+                if (!isRest) {
+                    activities.forEach(a => { if(a) activityCounts[a] = (activityCounts[a] || 0) + 1; });
+                    muscleRaw.split(',').forEach(m => {
+                        const tm = m.trim(); if(tm) muscleCounts[tm] = (muscleCounts[tm] || 0) + 1;
+                    });
+                }
+
+                if (actRaw.toLowerCase().includes('running')) {
+                    const metrics = details.split(',').map(m => parseFloat(m.replace(/[^0-9.]/g, '')));
+                    runDates.push(date);
+                    runMetric1.push(metrics[0] || 0);
+                    runMetric2.push(metrics[1] || 0);
+                    runMetric3.push(metrics[2] || 0);
+                }
+            } else {
+                card.innerHTML = `<div class="day-num">${i}</div>`;
+            }
+            card.onclick = () => openModal(i, date, actRaw, details, dur, cal, muscleRaw, comment);
+        } else {
+            card.innerHTML = `<div class="day-num">${i}</div>`;
+        }
+        matrix.appendChild(card);
+    }
+
+    // Update UI Stats
+    document.getElementById('total-cal').innerText = Math.round(totalCal).toLocaleString();
+    document.getElementById('total-dur').innerText = totalDur.toLocaleString();
+    document.getElementById('curr-streak').innerText = currentStreak;
+    document.getElementById('days-remaining').innerText = 100 - completedCount;
+    document.getElementById('progress-bar').style.width = completedCount + '%';
+
+    initCharts(muscleCounts, activityCounts, runDates, runMetric1, runMetric2, runMetric3);
+}
+
+function openModal(day, date, act, det, dur, cal, mus, com) {
+    document.getElementById('m-act').innerText = act || 'Pending';
+    document.getElementById('m-perf').innerText = `🔥 ${cal} kcal | ⏱ ${dur} mins`;
+    document.getElementById('m-mus').innerText = mus || 'N/A';
+    document.getElementById('m-det').innerText = `${det}\n\nCoach: ${com}`;
+    document.getElementById('modalOverlay').style.display = 'block';
+}
+
+function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
+
+function initCharts(m, a, rDate, r1, r2, r3) {
+    const chartDefaults = {
+        color: '#888',
+        font: { family: 'Inter' }
+    };
+    Chart.defaults.color = '#666';
+
+    new Chart(document.getElementById('muscleRadar'), {
+        type: 'radar',
+        data: { 
+            labels: Object.keys(m), 
+            datasets: [{ data: Object.values(m), borderColor: '#00ff88', backgroundColor: 'rgba(0,255,136,0.1)', borderWidth: 2, pointRadius: 0 }] 
+        },
+        options: { 
+            plugins: { legend: { display: false } }, 
+            scales: { r: { angleLines: { color: '#222' }, grid: { color: '#222' }, ticks: { display: false }, pointLabels: { font: { size: 10 } } } } 
+        }
+    });
+
+    new Chart(document.getElementById('activityPie'), {
+        type: 'doughnut',
+        data: { 
+            labels: Object.keys(a), 
+            datasets: [{ data: Object.values(a), backgroundColor: ['#00ff88','#d1c4e9','#3498db','#ff3e3e','#f1c40f'], borderWidth: 0, hoverOffset: 10 }] 
+        },
+        options: { 
+            cutout: '70%',
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 20, font: { size: 11 } } } } 
+        }
+    });
+
+    new Chart(document.getElementById('runningChart'), {
+        type: 'line',
+        data: {
+            labels: rDate,
+            datasets: [
+                { label: 'KM', data: r1, borderColor: '#00ff88', tension: 0.4, fill: false },
+                { label: 'Pace', data: r2, borderColor: '#3498db', tension: 0.4, fill: false }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { grid: { color: '#1a1a1a' }, border: { display: false } },
+                x: { grid: { display: false } }
+            },
+            plugins: { legend: { align: 'end', labels: { boxWidth: 12 } } }
+        }
+    });
+}
+</script>
+</body>
+</html>
