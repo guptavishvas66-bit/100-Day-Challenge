@@ -287,18 +287,17 @@ new Chart(document.getElementById('runningChart'), {
                 data: r2, 
                 borderColor: '#3498db', 
                 backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                tension: 0.3,
-                yAxisID: 'y', // Map to left axis
+                tension: 0.4,
+                yAxisID: 'yPace',
                 fill: true
             },
             { 
                 label: 'Heart Rate (bpm)', 
                 data: r3, 
                 borderColor: '#ff3e3e', 
-                tension: 0.3,
-                yAxisID: 'y1', // Map to right axis
-                pointRadius: 4,
-                pointBackgroundColor: '#ff3e3e'
+                tension: 0.4,
+                yAxisID: 'yHR',
+                pointRadius: 4
             }
         ]
     },
@@ -306,39 +305,26 @@ new Chart(document.getElementById('runningChart'), {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-            x: { 
-                grid: { display: false }, 
-                ticks: { color: '#666' } 
-            },
-            y: { // Left Axis: Pace
+            yPace: {
                 type: 'linear',
-                display: true,
                 position: 'left',
                 min: 2,
                 max: 8,
                 title: { display: true, text: 'Pace', color: '#3498db' },
-                grid: { color: '#1a1a1a' },
-                ticks: { color: '#666' }
+                grid: { color: '#1a1a1a' }
             },
-            y1: { // Right Axis: Heart Rate
+            yHR: {
                 type: 'linear',
-                display: true,
                 position: 'right',
                 min: 120,
                 max: 180,
                 title: { display: true, text: 'Heart Rate', color: '#ff3e3e' },
-                grid: { drawOnChartArea: false }, // Prevent grid lines from overlapping
-                ticks: { color: '#666' }
-            }
-        },
-        plugins: { 
-            legend: { 
-                labels: { color: '#888', boxWidth: 12 } 
+                grid: { display: false } // Keep it clean
             },
-            tooltip: {
-                mode: 'index',
-                intersect: false
-            }
+            x: { grid: { display: false } }
+        },
+        plugins: {
+            legend: { labels: { color: '#888', font: { size: 10 } } }
         }
     }
 });
