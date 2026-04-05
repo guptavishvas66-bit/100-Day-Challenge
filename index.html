@@ -131,8 +131,12 @@
 
     <div class="top-stats">
         <div class="stat-card"><div class="label">Energy Burned</div><div id="total-cal" class="val">0</div><div class="label">Total Kcal</div></div>
-        <div class="stat-card"><div class="label">Time Invested</div><div id="total-dur" class="val">0</div><div class="label">Total Mins</div></div>
-        <div class="stat-card"><div class="label">Current Streak</div><div id="curr-streak" class="val" style="color:var(--neon-green)">0</div><div class="label">Days Solid</div></div>
+        <div class="stat-card"><div class="label">Workout Duration</div><div id="total-dur" class="val">0</div><div class="label">Total Hrs</div></div>
+        <div class="stat-card">
+    <div class="label">Current Streak</div>
+    <div id="curr-streak" class="val" style="color:var(--neon-green)">0</div>
+    <div class="label">Best Streak: <span id="max-streak" style="color:var(--lavender)">0</span></div>
+</div>
         <div class="stat-card"><div class="label">Remaining</div><div id="days-remaining" class="val">0</div><div class="label">Days to Go</div></div>
     </div>
 
@@ -189,6 +193,9 @@ function processData(data) {
                 completedCount++;
                 tempStreak++;
                 currentStreak = tempStreak;
+		if (tempStreak > maxStreak) {
+		maxStreak = tempStreak;
+		}
                 totalCal += cal;
                 totalDur += dur;
 
@@ -231,10 +238,11 @@ function processData(data) {
     }
 
     document.getElementById('total-cal').innerText = Math.round(totalCal).toLocaleString();
-    document.getElementById('total-dur').innerText = totalDur.toLocaleString();
+    document.getElementById('total-dur').innerText = (totalDur / 60).toFixed(1);
     document.getElementById('curr-streak').innerText = currentStreak;
     document.getElementById('days-remaining').innerText = 100 - completedCount;
     document.getElementById('progress-bar').style.width = completedCount + '%';
+    document.getElementById('max-streak').innerText = maxStreak;
 
     initCharts(muscleCounts, activityCounts, runDates, runPace, runHR);
 }
