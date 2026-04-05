@@ -109,7 +109,8 @@
         <div class="modal-item"><div class="modal-label">Activity</div><div id="m-act" class="modal-val"></div></div>
         <div class="modal-item"><div class="modal-label">Performance</div><div id="m-perf" class="modal-val" style="color:var(--neon-green)"></div></div>
         <div class="modal-item"><div class="modal-label">Muscle Focus</div><div id="m-mus" class="modal-val"></div></div>
-        <div class="modal-item"><div class="modal-label">Details & Notes</div><div id="m-det" class="modal-val"></div></div>
+        <div class="modal-item"><div class="modal-label">Details</div><div id="m-det" class="modal-val"></div></div>
+        <div class="modal-item"><div class="modal-label">Post Activity Feedback</div><div id="m-com" class="modal-val"></div></div>
         <button id="closeBtn" onclick="closeModal()">CLOSE</button>
     </div>
 </div>
@@ -117,7 +118,7 @@
 <div class="container">
     <header class="main-header">
         <h1>100 Day Hybrid Challenge</h1>
-        <div class="subtitle">Peak Human Performance Protocol</div>
+        <div class="subtitle"></div>
     </header>
 
     <div class="timeline-card">
@@ -189,12 +190,14 @@ function processData(data) {
 
         if (row) {
             const vals    = Object.values(row);
-            const date    = vals[1]  || '';
-            const actRaw  = vals[2]  || '';
-            const details = vals[3]  || '';
-            const status  = (vals[4] || '').trim().toLowerCase();
-            const dur     = parseFloat(vals[5]) || 0;
-            const cal     = parseFloat(vals[6]) || 0;
+            const date      = vals[1] || '';
+            const actRaw    = vals[2] || '';
+            // Details now uses pipe separators: "Distance - 5km | Pace - 7:33/km | HR - 173bpm"
+            // No commas inside, so PapaParse reads it as a single column cleanly.
+            const details   = vals[3] || '';
+            const status    = (vals[4] || '').trim().toLowerCase();
+            const dur       = parseFloat(vals[5]) || 0;
+            const cal       = parseFloat(vals[6]) || 0;
             const muscleRaw = vals[7] || '';
             const comment   = vals[8] || '';
 
@@ -230,11 +233,28 @@ function processData(data) {
                 }
 
                 if (actRaw.toLowerCase().includes('running')) {
-                    const metrics = details.split(',').map(m => parseFloat(m.replace(/[^0-9.]/g, '')));
-                    runDates.push(date);
-                    runMetric1.push(metrics[0] || 0);
-                    runMetric2.push(metrics[1] || 0);
-                    runMetric3.push(metrics[2] || 0);
+                    // Format: "Distance - 5km | Pace - 7:33/km | HR - 173bpm"
+                    const distMatch = details.match(/Distance\s*-\s*([\d.]+)\s*km/i);
+                    const paceMatch = details.match(/Pace\s*-\s*(\d+):(\d+)\/km/i);
+                    const hrMatch   = details.match(/HR\s*-\s*(\d+)\s*bpm/i);
+
+                    const dist = distMatch ? parseFloat(distMatch[1]) : null;
+
+                    let pace = null;
+                    if (paceMatch) {
+                        const mins = parseInt(paceMatch[1]) || 0;
+                        const secs = parseInt(paceMatch[2]) || 0;
+                        pace = parseFloat((mins + secs / 60).toFixed(2));
+                    }
+
+                    const hr = hrMatch ? parseInt(hrMatch[1]) : null;
+
+                    if (dist !== null || pace !== null || hr !== null) {
+                        runDates.push(date);
+                        runMetric1.push(dist);
+                        runMetric2.push(pace);
+                        runMetric3.push(hr);
+                    }
                 }
 
             } else {
@@ -278,7 +298,8 @@ function openModal(day, date, act, det, dur, cal, mus, com, status) {
         : `🔥 Calories: ${cal} kcal\n⏱ Duration: ${dur} mins`;
     document.getElementById('m-mus').innerText  = mus || 'N/A';
     document.getElementById('m-det').innerText  =
-        `Details: ${det || '—'}\n\nCoach's Note: ${com || '—'}`;
+        det || '—';
+    document.getElementById('m-com').innerText  = com || '—';
     document.getElementById('modalOverlay').style.display = 'block';
 }
 
@@ -344,29 +365,18 @@ function initCharts(m, a, rDate, r1, r2, r3) {
 
     // Running Performance — bar (distance) + dual-axis lines (pace left, HR right)
     new Chart(document.getElementById('runningChart'), {
-        type: 'bar',
+        type: 'line',
         data: {
             labels: rDate,
             datasets: [
                 {
-                    label: 'Distance (km)',
-                    data: r1,
-                    type: 'bar',
-                    backgroundColor: 'rgba(0,255,136,0.25)',
-                    borderColor: '#00ff88',
-                    borderWidth: 1,
-                    borderRadius: 4,
-                    yAxisID: 'yDist',
-                    order: 3
-                },
-                {
                     label: 'Avg Pace (min/km)',
                     data: r2,
-                    type: 'line',
                     borderColor: '#3498db',
-                    backgroundColor: 'transparent',
+                    backgroundColor: 'rgba(52,152,219,0.1)',
                     pointBackgroundColor: '#3498db',
                     pointRadius: 4,
+                    pointHoverRadius: 6,
                     tension: 0.3,
                     yAxisID: 'yPace',
                     order: 1
@@ -374,11 +384,11 @@ function initCharts(m, a, rDate, r1, r2, r3) {
                 {
                     label: 'Avg Heart Rate (bpm)',
                     data: r3,
-                    type: 'line',
                     borderColor: '#ff3e3e',
-                    backgroundColor: 'transparent',
+                    backgroundColor: 'rgba(255,62,62,0.1)',
                     pointBackgroundColor: '#ff3e3e',
                     pointRadius: 4,
+                    pointHoverRadius: 6,
                     tension: 0.3,
                     yAxisID: 'yHR',
                     order: 2
@@ -386,24 +396,19 @@ function initCharts(m, a, rDate, r1, r2, r3) {
             ]
         },
         options: {
-            ...chartDefaults,
+            responsive: true,
+            animation: { duration: 600 },
             interaction: { mode: 'index', intersect: false },
             scales: {
                 x: {
                     grid: { display: false },
                     ticks: { color: '#555', font: { size: 10 } }
                 },
-                yDist: {
-                    type: 'linear',
-                    position: 'left',
-                    display: false,   // hidden — bars speak for themselves
-                    grid: { color: '#1a1a1a' }
-                },
                 yPace: {
                     type: 'linear',
                     position: 'left',
                     min: 0,
-                    max: 6,
+                    max: 10,
                     grid: { color: '#1a1a1a' },
                     ticks: {
                         color: '#3498db',
@@ -445,14 +450,21 @@ function initCharts(m, a, rDate, r1, r2, r3) {
                 tooltip: {
                     callbacks: {
                         label: ctx => {
-                            const u = ['km', 'min/km', 'bpm'][ctx.datasetIndex];
-                            return ` ${ctx.dataset.label}: ${ctx.parsed.y} ${u}`;
+                            const v = ctx.parsed.y;
+                            const i = ctx.datasetIndex;
+                            const dist = r1[ctx.dataIndex];
+                            if (i === 0) {
+                                const mins = Math.floor(v);
+                                const secs = String(Math.round((v - mins) * 60)).padStart(2, '0');
+                                return [` Pace: ${mins}:${secs}/km`, dist != null ? ` Distance: ${dist} km` : ''];
+                            }
+                            if (i === 1) return ` HR: ${v} bpm`;
                         }
                     }
                 }
             }
         }
-    });
+    }));
 }
 </script>
 </body>
