@@ -37,13 +37,12 @@
 
         /* 10x10 Matrix */
         .matrix { display: grid; grid-template-columns: repeat(10, 1fr); gap: 10px; margin-top: 20px; }
-        .day-card { aspect-ratio: 1/1; background: #1a1a1a; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid #222; transition: 0.2s; }
+        .day-card { aspect-ratio: 1/1; background: #1a1a1a; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; border: 1px solid #222; transition: 0.2s; }
         .day-card.completed { border-color: var(--neon-green); background: rgba(0,255,136,0.05); }
         .day-card.rest { border-color: var(--lavender); background: rgba(209,196,233,0.05); }
         .day-card.missed { border-color: var(--missed-red); background: rgba(255,62,62,0.05); }
-        
-        /* THE CHANGE: Massive icons, no number space */
-        .day-icons { font-size: 2.1rem; }
+        .day-num { font-weight: 900; font-size: 0.8rem; color: #444; }
+        .day-icons { font-size: 1.3rem; margin-top: 2px; }
 
         /* Modal */
         #modalOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; backdrop-filter: blur(10px); }
@@ -95,6 +94,7 @@
 </div>
 
 <script>
+// Replace this with your Google Sheet URL
 const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTFHuEh8YaZrUW7H4YijeyEoWhLtigGxbmmDAblq-SoobT-RI1MO30Bu0t_zcOttpph-QrsJOxm_X3P/pub?gid=0&single=true&output=csv';
 
 const iconMap = {
@@ -109,7 +109,7 @@ Papa.parse(csvUrl, {
 function processData(data) {
     const matrix = document.getElementById('dayMatrix');
     matrix.innerHTML = ''; 
-    let muscleCounts = {};
+    let muscleCounts = {}, activityCounts = {};
     let totalCal = 0, totalDur = 0, currentStreak = 0, maxStreak = 0, tempStreak = 0, completedCount = 0;
     
     let runLabels = [], runDist = [], runPace = [], runHR = [];
@@ -121,14 +121,14 @@ function processData(data) {
         
         if (row) {
             const vals = Object.values(row);
-            // MAPPING STAYS THE SAME: A=0, B=1, C=2, D=3, E=4, F=5, G=6, H=7, I=8
+            // MAPPING: A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8
             const date = vals[1], actStr = (vals[2] || '').trim(), details = vals[3] || '', status = (vals[4] || '').trim().toLowerCase();
             const dur = parseFloat(vals[5]) || 0, cal = parseFloat(vals[6]) || 0, muscleStr = vals[7] || '', comment = vals[8] || '';
 
             if (status === 'missed') {
                 card.classList.add('missed');
                 tempStreak = 0;
-                card.innerHTML = `<div class="day-icons">❌</div>`;
+                card.innerHTML = `<div class="day-num">${i}</div><div class="day-icons">❌</div>`;
             } else if (status === 'completed') {
                 completedCount++;
                 tempStreak++;
@@ -141,17 +141,20 @@ function processData(data) {
                 const isRest = actStr.toLowerCase().includes('rest');
                 card.classList.add(isRest ? 'rest' : 'completed');
                 
+                // Multi-Activity Logic
                 const activities = actStr.split(',').map(s => s.trim());
                 let icons = activities.map(a => iconMap[a.toLowerCase()] || '⚡').join('');
-                card.innerHTML = `<div class="day-icons">${icons}</div>`;
+                card.innerHTML = `<div class="day-num">${i}</div><div class="day-icons">${icons}</div>`;
 
                 if (!isRest) {
+                    activities.forEach(a => activityCounts[a] = (activityCounts[a] || 0) + 1);
                     muscleStr.split(',').forEach(m => { 
                         let tm = m.trim(); 
                         if(tm) muscleCounts[tm] = (muscleCounts[tm] || 0) + 1; 
                     });
                 }
 
+                // Running Performance (Metric parsing)
                 if (actStr.toLowerCase().includes('running')) {
                     const metrics = details.split(',').map(m => parseFloat(m.replace(/[^\d.]/g, '')) || 0);
                     runLabels.push(date);
@@ -160,16 +163,16 @@ function processData(data) {
                     runHR.push(metrics[2]);
                 }
             } else {
-                card.innerHTML = `<div class="day-icons" style="color:#222; font-size:1rem">•</div>`;
+                card.innerHTML = `<div class="day-num">${i}</div>`;
             }
             card.onclick = () => openModal(i, date, actStr, details, dur, cal, muscleStr, comment);
         } else {
-            card.innerHTML = `<div class="day-icons" style="color:#222; font-size:1rem">•</div>`;
+            card.innerHTML = `<div class="day-num" style="color:#222">${i}</div>`;
         }
         matrix.appendChild(card);
     }
 
-    // Totals logic stays same
+    // Update Totals
     document.getElementById('total-cal').innerText = Math.round(totalCal).toLocaleString();
     document.getElementById('total-dur').innerText = totalDur.toLocaleString();
     document.getElementById('curr-streak').innerText = currentStreak;
@@ -182,7 +185,6 @@ function processData(data) {
 }
 
 function openModal(day, date, act, det, dur, cal, mus, com) {
-    document.getElementById('m-header').innerText = `SESSION REPORT | DAY ${day}`;
     document.getElementById('m-act').innerText = act;
     document.getElementById('m-perf').innerText = `🔥 Burned: ${cal} kcal\n⏱ Duration: ${dur} mins`;
     document.getElementById('m-mus').innerText = mus || 'N/A';
@@ -193,6 +195,7 @@ function openModal(day, date, act, det, dur, cal, mus, com) {
 function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
 
 function initCharts(muscles, rDates, rDist, rPace, rHR) {
+    // Muscle Radar
     new Chart(document.getElementById('muscleRadar'), {
         type: 'radar',
         data: {
@@ -202,6 +205,7 @@ function initCharts(muscles, rDates, rDist, rPace, rHR) {
         options: { plugins: { legend: { display: false } }, scales: { r: { grid: { color: '#222' }, pointLabels: { color: '#555' }, ticks: { display: false } } } }
     });
 
+    // Running Line Chart
     new Chart(document.getElementById('runningChart'), {
         type: 'line',
         data: {
