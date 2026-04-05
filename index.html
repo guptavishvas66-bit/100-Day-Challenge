@@ -200,24 +200,85 @@ function initCharts(m, a, rDate, rPace, rHR) {
         options: { cutout: '70%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, color: '#666' } } } }
     });
     new Chart(document.getElementById('runningChart'), {
-        type: 'line',
-        data: {
-            labels: rDate,
-            datasets: [
-                { label: 'Pace', data: rPace, borderColor: '#3498db', yAxisID: 'yPace', tension: 0.4 },
-                { label: 'HR', data: rHR, borderColor: '#ff3e3e', yAxisID: 'yHR', tension: 0.4 }
-            ]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: {
-                yPace: { type: 'linear', position: 'left', min: 2, max: 8, title: { display: true, text: 'Pace', color: '#3498db' }, grid: { color: '#1a1a1a' } },
-                yHR: { type: 'linear', position: 'right', min: 120, max: 180, title: { display: true, text: 'HR', color: '#ff3e3e' }, grid: { display: false } },
-                x: { grid: { display: false } }
+    type: 'line',
+    data: {
+        labels: rDate,
+        datasets: [
+            { 
+                label: 'Pace', 
+                data: rPace, 
+                borderColor: '#3498db', 
+                yAxisID: 'yPace', 
+                tension: 0.4,
+                pointRadius: 4
             },
-            plugins: { legend: { align: 'end', labels: { color: '#666', boxWidth: 12 } } }
+            { 
+                label: 'HR', 
+                data: rHR, 
+                borderColor: '#ff3e3e', 
+                yAxisID: 'yHR', 
+                tension: 0.4,
+                pointRadius: 4
+            }
+        ]
+    },
+    options: {
+        responsive: true, 
+        maintainAspectRatio: false,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
+        scales: {
+            yPace: { 
+                type: 'linear', 
+                position: 'left', 
+                min: 2, 
+                max: 8, 
+                title: { 
+                    display: true, 
+                    text: 'Pace (min/km)', // Added Unit
+                    color: '#3498db',
+                    font: { size: 10, weight: 'bold' }
+                }, 
+                grid: { color: '#1a1a1a' } 
+            },
+            yHR: { 
+                type: 'linear', 
+                position: 'right', 
+                min: 120, 
+                max: 180, 
+                title: { 
+                    display: true, 
+                    text: 'Heart Rate (bpm)', // Added Unit
+                    color: '#ff3e3e',
+                    font: { size: 10, weight: 'bold' }
+                }, 
+                grid: { display: false } 
+            },
+            x: { grid: { display: false } }
+        },
+        plugins: {
+            legend: { align: 'end', labels: { color: '#666', boxWidth: 12 } },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        let label = context.dataset.label || '';
+                        let value = context.parsed.y;
+
+                        if (label === 'Pace') {
+                            // Convert decimal (e.g. 7.55) to 7'33''
+                            const mins = Math.floor(value);
+                            const secs = Math.round((value - mins) * 60);
+                            return `Pace: ${mins}'${secs.toString().padStart(2, '0')}'' per km`;
+                        }
+                        return `${label}: ${Math.round(value)} bpm`;
+                    }
+                }
+            }
         }
-    });
+    }
+});
 }
 </script>
 </body>
