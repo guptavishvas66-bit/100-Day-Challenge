@@ -276,25 +276,72 @@ function initCharts(m, a, rDate, r1, r2, r3) {
         }
     });
 
-    new Chart(document.getElementById('runningChart'), {
-        type: 'line',
-        data: {
-            labels: rDate,
-            datasets: [
-                { label: 'KM', data: r1, borderColor: '#00ff88', tension: 0.4, fill: false },
-                { label: 'Pace', data: r2, borderColor: '#3498db', tension: 0.4, fill: false }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { grid: { color: '#1a1a1a' }, border: { display: false } },
-                x: { grid: { display: false } }
+   // Running Comparison Chart with Dual Axis
+new Chart(document.getElementById('runningChart'), {
+    type: 'line',
+    data: {
+        labels: rDate,
+        datasets: [
+            { 
+                label: 'Pace (min/km)', 
+                data: r2, 
+                borderColor: '#3498db', 
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                tension: 0.3,
+                yAxisID: 'y', // Map to left axis
+                fill: true
             },
-            plugins: { legend: { align: 'end', labels: { boxWidth: 12 } } }
+            { 
+                label: 'Heart Rate (bpm)', 
+                data: r3, 
+                borderColor: '#ff3e3e', 
+                tension: 0.3,
+                yAxisID: 'y1', // Map to right axis
+                pointRadius: 4,
+                pointBackgroundColor: '#ff3e3e'
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            x: { 
+                grid: { display: false }, 
+                ticks: { color: '#666' } 
+            },
+            y: { // Left Axis: Pace
+                type: 'linear',
+                display: true,
+                position: 'left',
+                min: 2,
+                max: 8,
+                title: { display: true, text: 'Pace', color: '#3498db' },
+                grid: { color: '#1a1a1a' },
+                ticks: { color: '#666' }
+            },
+            y1: { // Right Axis: Heart Rate
+                type: 'linear',
+                display: true,
+                position: 'right',
+                min: 120,
+                max: 180,
+                title: { display: true, text: 'Heart Rate', color: '#ff3e3e' },
+                grid: { drawOnChartArea: false }, // Prevent grid lines from overlapping
+                ticks: { color: '#666' }
+            }
+        },
+        plugins: { 
+            legend: { 
+                labels: { color: '#888', boxWidth: 12 } 
+            },
+            tooltip: {
+                mode: 'index',
+                intersect: false
+            }
         }
-    });
+    }
+});
 }
 </script>
 </body>
