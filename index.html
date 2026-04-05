@@ -118,7 +118,10 @@
         <div class="modal-item"><div class="modal-label">Activity</div><div id="m-act" class="modal-val"></div></div>
         <div class="modal-item"><div class="modal-label">Metabolic Impact</div><div id="m-perf" class="modal-val" style="color:var(--neon-green)"></div></div>
         <div class="modal-item"><div class="modal-label">Target Groups</div><div id="m-mus" class="modal-val"></div></div>
-        <div class="modal-item"><div class="modal-label">Notes</div><div id="m-det" class="modal-val" style="font-size: 0.85rem; line-height:1.4;"></div></div>
+        <div class="modal-item">
+    <div class="modal-label">Notes</div>
+    <div id="m-det" class="modal-val" style="font-size: 0.85rem; line-height:1.4;"></div>
+</div>
         <button id="closeBtn" onclick="closeModal()">DISMISS</button>
     </div>
 </div>
@@ -239,7 +242,10 @@ function openModal(day, date, act, det, dur, cal, mus, com) {
     document.getElementById('m-act').innerText = act || 'Pending';
     document.getElementById('m-perf').innerText = `🔥 ${cal} kcal | ⏱ ${dur} mins`;
     document.getElementById('m-mus').innerText = mus || 'N/A';
-    document.getElementById('m-det').innerText = `${det}\n\nCoach: ${com}`;
+    
+    // Updated label mapping here
+    document.getElementById('m-det').innerText = `${det}\n\nPost activity feedback: ${com}`;
+    
     document.getElementById('modalOverlay').style.display = 'block';
 }
 
