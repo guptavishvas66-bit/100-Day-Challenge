@@ -37,12 +37,13 @@
 
         /* 10x10 Matrix */
         .matrix { display: grid; grid-template-columns: repeat(10, 1fr); gap: 10px; margin-top: 20px; }
-        .day-card { aspect-ratio: 1/1; background: #1a1a1a; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; border: 1px solid #222; transition: 0.2s; }
+        .day-card { aspect-ratio: 1/1; background: #1a1a1a; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid #222; transition: 0.2s; }
         .day-card.completed { border-color: var(--neon-green); background: rgba(0,255,136,0.05); }
         .day-card.rest { border-color: var(--lavender); background: rgba(209,196,233,0.05); }
         .day-card.missed { border-color: var(--missed-red); background: rgba(255,62,62,0.05); }
-        .day-num { font-weight: 900; font-size: 0.8rem; color: #444; }
-        .day-icons { font-size: 1.3rem; margin-top: 2px; }
+        
+        /* UPDATED: Removed day-num, bigger day-icons */
+        .day-icons { font-size: 2.1rem; }
 
         /* Modal */
         #modalOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; backdrop-filter: blur(10px); }
@@ -109,7 +110,7 @@ Papa.parse(csvUrl, {
 function processData(data) {
     const matrix = document.getElementById('dayMatrix');
     matrix.innerHTML = ''; 
-    let muscleCounts = {}, activityCounts = {};
+    let muscleCounts = {};
     let totalCal = 0, totalDur = 0, currentStreak = 0, maxStreak = 0, tempStreak = 0, completedCount = 0;
     
     let runLabels = [], runDist = [], runPace = [], runHR = [];
@@ -128,7 +129,8 @@ function processData(data) {
             if (status === 'missed') {
                 card.classList.add('missed');
                 tempStreak = 0;
-                card.innerHTML = `<div class="day-num">${i}</div><div class="day-icons">❌</div>`;
+                // UPDATED: No number, just icon
+                card.innerHTML = `<div class="day-icons">❌</div>`;
             } else if (status === 'completed') {
                 completedCount++;
                 tempStreak++;
@@ -144,10 +146,10 @@ function processData(data) {
                 // Multi-Activity Logic
                 const activities = actStr.split(',').map(s => s.trim());
                 let icons = activities.map(a => iconMap[a.toLowerCase()] || '⚡').join('');
-                card.innerHTML = `<div class="day-num">${i}</div><div class="day-icons">${icons}</div>`;
+                // UPDATED: No number, just icon
+                card.innerHTML = `<div class="day-icons">${icons}</div>`;
 
                 if (!isRest) {
-                    activities.forEach(a => activityCounts[a] = (activityCounts[a] || 0) + 1);
                     muscleStr.split(',').forEach(m => { 
                         let tm = m.trim(); 
                         if(tm) muscleCounts[tm] = (muscleCounts[tm] || 0) + 1; 
@@ -163,11 +165,13 @@ function processData(data) {
                     runHR.push(metrics[2]);
                 }
             } else {
-                card.innerHTML = `<div class="day-num">${i}</div>`;
+                // Pre-planned or empty days
+                card.innerHTML = `<div class="day-icons" style="color:#222">•</div>`;
             }
             card.onclick = () => openModal(i, date, actStr, details, dur, cal, muscleStr, comment);
         } else {
-            card.innerHTML = `<div class="day-num" style="color:#222">${i}</div>`;
+            // Out-of-bounds days
+            card.innerHTML = `<div class="day-icons" style="color:#222">•</div>`;
         }
         matrix.appendChild(card);
     }
@@ -185,6 +189,8 @@ function processData(data) {
 }
 
 function openModal(day, date, act, det, dur, cal, mus, com) {
+    // Modal header still shows the day number for context
+    document.getElementById('m-header').innerText = `SESSION REPORT | DAY ${day}`;
     document.getElementById('m-act').innerText = act;
     document.getElementById('m-perf').innerText = `🔥 Burned: ${cal} kcal\n⏱ Duration: ${dur} mins`;
     document.getElementById('m-mus').innerText = mus || 'N/A';
